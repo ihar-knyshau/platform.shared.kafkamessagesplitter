@@ -19,7 +19,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class Runner {
     private static final String chunkTopic = "finalchunk";
     private static final String consumerGroup = "finalchunk";
-    private static final String kafkaUri = "finalchunk";
+    private static final String kafkaUri = "kafka.uri";
 
     public static void main(String[] args) throws IOException {
         InputStream inputStream = Runner.class.getResourceAsStream("/message");
