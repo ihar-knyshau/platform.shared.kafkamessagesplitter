@@ -12,8 +12,8 @@ import java.util.UUID;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class KafkaMessageSplitter {
-    private static final String UUID_KEY = "uuid";
-    private static final String FINAL_CHUNK_KEY = "finalchunk";
+    public static final String UUID_KEY = "uuid";
+    public static final String FINAL_CHUNK_KEY = "finalchunk";
     private int desiredChunkSize;
 
     public KafkaMessageSplitter(int desiredChunkSize) {
@@ -63,6 +63,7 @@ public class KafkaMessageSplitter {
         RecordHeader uuidHeader = new RecordHeader(UUID_KEY, uuid);
         headers.add(uuidHeader);
         byte[] finalChunkBytes = new byte[1];
+        finalChunkBytes[0] = finalChunk ? (byte) 1 : (byte) 0;
         RecordHeader finalChunkHeader = new RecordHeader(FINAL_CHUNK_KEY, finalChunkBytes);
         headers.add(finalChunkHeader);
         return headers;

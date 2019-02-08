@@ -17,9 +17,9 @@ import java.util.List;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Runner {
-    private static final String chunkTopic = "finalchunk";
-    private static final String consumerGroup = "finalchunk";
-    private static final String kafkaUri = "kafka.uri";
+    private static final String chunkTopic = "test1";
+    private static final String consumerGroup = "test1";
+    private static final String kafkaUri = "quickstart.cloudera:9092";
 
     public static void main(String[] args) throws IOException {
         InputStream inputStream = Runner.class.getResourceAsStream("/message");
