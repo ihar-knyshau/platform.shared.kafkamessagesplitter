@@ -28,7 +28,7 @@ public class KafkaMessageSender {
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroup);
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
-        props.put("max.poll.records", 1000);
+        props.put("max.poll.records", 500);
         props.put("auto.offset.reset", "earliest");
         return new KafkaConsumer<>(props);
     }

@@ -5,6 +5,7 @@ import com.ebsco.platform.shared.kafka.KafkaMessageSplitter;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.OffsetAndMetadata;
@@ -29,13 +30,15 @@ import java.util.concurrent.ThreadLocalRandom;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class PartsConsumer {
-    private static final String chunkTopic = "test16";
-    private static final String consumerGroup = "test16";
+    private static final String chunkTopic = "test17";
+    private static final String consumerGroup = "test17";
     private static final String kafkaUri = "quickstart.cloudera:9092";
 
     private Map<String, Queue<byte[]>> chunksMap = new HashMap<>();
     private Map<String, byte[]> completedMap = new HashMap<>();
     private Map<Integer, Long> offsetForPartitionMap = new HashMap<>();
+    int unsubscribed = 0;
+    int completed = 0;
 
     public static void main(String[] args) throws IOException {
         new PartsConsumer().consume();
@@ -47,8 +50,8 @@ public class PartsConsumer {
         List<String> files = IOUtils.readLines(PartsConsumer.class.getClassLoader().getResourceAsStream("asimov_txt"), Charsets.UTF_8);
 
         List<String> list = new ArrayList<>();
-        Consumer<byte[], byte[]> consumer = KafkaMessageSender.createConsumer(kafkaUri, consumerGroup);
-        consumer.subscribe(Collections.singletonList(chunkTopic));
+//        Consumer<byte[], byte[]> consumer = KafkaMessageSender.createConsumer(kafkaUri, consumerGroup);
+//        consumer.subscribe(Collections.singletonList(chunkTopic));
 
         for (String file : files) {
             Producer<byte[], byte[]> producer = KafkaMessageSender.createProducer(kafkaUri);
@@ -80,38 +83,52 @@ public class PartsConsumer {
 
         for (int i = 0; i < 5; i++) {
             new Thread(() -> {
+                Consumer<byte[], byte[]> consumer = KafkaMessageSender.createConsumer(kafkaUri, consumerGroup);
+                consumer.subscribe(Collections.singletonList(chunkTopic));
                 while (true) {
 //                    try {
 //                        Thread.sleep(ThreadLocalRandom.current().nextInt(100, 5000 + 1));
 //                    } catch (InterruptedException e) {
 //                        e.printStackTrace();
 //                    }
-                    ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(Duration.ofMinutes(1));
 
-                    Instant ins = Instant.now();
+//                    if(ThreadLocalRandom.current().nextInt(1, 10 + 1) > 9 && unsubscribed < 3){
+//                        consumer.unsubscribe();
+//                        unsubscribed++;
+//                        break;
+//                    } else {
+                        ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(Duration.ofSeconds(20));
 
-                    consumerRecords.records(chunkTopic).forEach(e -> {
-                        if (e.headers().lastHeader(KafkaMessageSplitter.FINAL_CHUNK_KEY).value()[0] == (byte) 1) {
-                            storeResult(e);
-                        } else {
-                            storeChunk(e);
+
+                        Instant ins = Instant.now();
+                        if(consumerRecords.isEmpty()){
+                            break;
                         }
-                        offsetForPartitionMap.put(e.partition(), e.offset());
-                        if (chunksMap.isEmpty()) {
+                        consumerRecords.records(chunkTopic).forEach(e -> {
+                            if (e.headers().lastHeader(KafkaMessageSplitter.FINAL_CHUNK_KEY).value()[0] == (byte) 1) {
+                                storeResult(e);
+                            } else {
+                                storeChunk(e);
+                            }
+                            offsetForPartitionMap.put(e.partition(), e.offset());
+                            if (chunksMap.isEmpty()) {
 
-                            checkFiles(list);
+                                checkFiles(list);
 
-                            Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
-                            offsetForPartitionMap.forEach((key, value) -> offsets.put(new TopicPartition(chunkTopic, key), new OffsetAndMetadata(value + 1)));
-                            consumer.commitSync(offsets);
+                                Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
+                                offsetForPartitionMap.forEach((key, value) -> offsets.put(new TopicPartition(chunkTopic, key), new OffsetAndMetadata(value + 1)));
+                                consumer.commitSync(offsets);
 //                    completedMap.values().forEach(s -> System.out.println(new String(s)));
-                            System.out.println("processed messages: " + completedMap.size());
-                            completedMap.clear();
-                        }
-                    });
-                    System.out.println("Ptocessing time:" + Duration.between(ins, Instant.now()));
-                }
+                                completed+=completedMap.size();
+                                System.out.println("Processed messages: " + completed + "/81");
+                                completedMap.clear();
+                            }
+                        });
+                        System.out.println("Processing time: " + Duration.between(ins, Instant.now()));
+                    }
+//                }
             }).start();
+
         }
     }
 
