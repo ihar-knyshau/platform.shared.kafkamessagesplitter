@@ -11,7 +11,7 @@ import org.apache.kafka.common.serialization.ByteArraySerializer;
 
 import java.util.Properties;
 
-public class KafkaMessageSender {
+public class KafkaFactory {
 
     public static Producer<byte[], byte[]> createProducer(String kafkaURI) {
         Properties props = new Properties();
@@ -27,6 +27,8 @@ public class KafkaMessageSender {
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerGroup);
-        return new KafkaConsumer<>(props);
+        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        return new ChunksConsumer(props);
     }
 }

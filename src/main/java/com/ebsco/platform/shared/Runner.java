@@ -1,6 +1,6 @@
 package com.ebsco.platform.shared;
 
-import com.ebsco.platform.shared.kafka.KafkaMessageSender;
+import com.ebsco.platform.shared.kafka.KafkaFactory;
 import com.ebsco.platform.shared.kafka.KafkaMessageSplitter;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.consumer.Consumer;
@@ -25,18 +25,26 @@ public class Runner {
         InputStream inputStream = Runner.class.getResourceAsStream("/message");
         String strMessage = IOUtils.toString(inputStream, UTF_8);
 
-        Consumer<byte[], byte[]> consumer = KafkaMessageSender.createConsumer(kafkaUri, consumerGroup);
+        Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(kafkaUri, consumerGroup);
         consumer.subscribe(Collections.singletonList(chunkTopic));
 
         KafkaMessageSplitter kafkaMessageSplitter = new KafkaMessageSplitter(1024);
         List<byte[]> chunks = kafkaMessageSplitter.splitMessage(strMessage);
         List<ProducerRecord<byte[], byte[]>> records = kafkaMessageSplitter.createChunkRecords(chunks, chunkTopic);
-        Producer<byte[], byte[]> producer = KafkaMessageSender.createProducer(kafkaUri);
+        Producer<byte[], byte[]> producer = KafkaFactory.createProducer(kafkaUri);
         for (ProducerRecord<byte[], byte[]> record : records) {
             producer.send(record);
         }
 
-        ConsumerRecords<byte[], byte[]> consumerRecords = consumer.poll(Duration.ofMinutes(1));
-        consumerRecords.records(chunkTopic).iterator().forEachRemaining(System.out::println);
+        ConsumerRecords<byte[], byte[]> consumerRecords;
+        do {
+            consumerRecords = consumer.poll(Duration.ofMinutes(1));
+        } while (consumerRecords.isEmpty());
+
+        consumerRecords.records(chunkTopic).iterator().forEachRemaining(record -> {
+            String composed = new String(record.value());
+            System.out.println(strMessage.equals(composed));
+        });
+
     }
 }

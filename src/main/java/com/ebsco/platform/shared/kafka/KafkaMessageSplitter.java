@@ -4,6 +4,7 @@ import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.header.Header;
 import org.apache.kafka.common.header.internals.RecordHeader;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -12,8 +13,10 @@ import java.util.UUID;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class KafkaMessageSplitter {
-    private static final String UUID_KEY = "uuid";
-    private static final String FINAL_CHUNK_KEY = "finalchunk";
+    public static final String UUID_KEY = "uuid";
+    public static final String TOTAL_CHUNKS = "totalchunks";
+    public static final String CURRENT_CHUNK = "currentchunks";
+    public static final String FINAL_CHUNK_KEY = "finalchunk";
     private int desiredChunkSize;
 
     public KafkaMessageSplitter(int desiredChunkSize) {
@@ -46,9 +49,9 @@ public class KafkaMessageSplitter {
         for (int i = 0; i < chunkList.size(); i++) {
             Iterable<Header> headers = null;
             if (i != chunkList.size() - 1) {
-                headers = createChunkHeaders(uuid, false);
+                headers = createChunkHeaders(uuid, i + 1, chunkList.size(), false);
             } else {
-                headers = createChunkHeaders(uuid, true);
+                headers = createChunkHeaders(uuid, i + 1, chunkList.size(), true);
             }
             byte[] chunk = chunkList.get(i);
             ProducerRecord<byte[], byte[]> record =
@@ -58,11 +61,16 @@ public class KafkaMessageSplitter {
         return recordList;
     }
 
-    private Iterable<Header> createChunkHeaders(byte[] uuid, boolean finalChunk) {
+    private Iterable<Header> createChunkHeaders(byte[] uuid, int currentChunk, int totalChunks, boolean finalChunk) {
         List<Header> headers = new LinkedList<>();
         RecordHeader uuidHeader = new RecordHeader(UUID_KEY, uuid);
         headers.add(uuidHeader);
+        RecordHeader currentChunkHeader = new RecordHeader(CURRENT_CHUNK, ByteBuffer.allocate(4).putInt(currentChunk).array());
+        headers.add(currentChunkHeader);
+        RecordHeader totalChunksHeader = new RecordHeader(TOTAL_CHUNKS, ByteBuffer.allocate(4).putInt(totalChunks).array());
+        headers.add(totalChunksHeader);
         byte[] finalChunkBytes = new byte[1];
+        finalChunkBytes[0] = finalChunk ? (byte) 1 : (byte) 0;
         RecordHeader finalChunkHeader = new RecordHeader(FINAL_CHUNK_KEY, finalChunkBytes);
         headers.add(finalChunkHeader);
         return headers;
