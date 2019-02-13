@@ -7,98 +7,61 @@ import org.apache.kafka.common.PartitionInfo;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 public class ChunksConsumer implements Consumer<byte[], byte[]> {
+    public static final String CACHE_LIFESPAN_PROPERTY = "consumer.cache.lifespan";
 
     private KafkaConsumer<byte[], byte[]> kafkaConsumer;
-
-    private Map<String, Map<String, Queue<byte[]>>> topicsChunks = new LinkedHashMap<>();
+    private KafkaTimeBasedChunkCache timeBasedChunkCache;
+    private Map<TopicPartition, Long> committedOffsets = new HashMap<>();
+    private final Long DEFAULT_CACHE_LIFESPAN = 1000 * 60 * 3L;//10 mins
 
 
     public ChunksConsumer(Map<String, Object> configs) {
         configs.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        Long cacheLifespan = (Long) configs.getOrDefault(CACHE_LIFESPAN_PROPERTY, DEFAULT_CACHE_LIFESPAN);
+        timeBasedChunkCache = new KafkaTimeBasedChunkCache(cacheLifespan);
         kafkaConsumer = new KafkaConsumer(configs, new ByteArrayDeserializer(), new ByteArrayDeserializer());
     }
 
     public ChunksConsumer(Properties properties) {
         properties.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);
+        Optional lifespan = Optional.ofNullable(properties.getProperty(CACHE_LIFESPAN_PROPERTY));
+        Long cacheLifespan = lifespan.isPresent() ? Long.parseLong((String) lifespan.get()) : DEFAULT_CACHE_LIFESPAN;
+        timeBasedChunkCache = new KafkaTimeBasedChunkCache(cacheLifespan);
         kafkaConsumer = new KafkaConsumer(properties, new ByteArrayDeserializer(), new ByteArrayDeserializer());
     }
 
-    private Optional<ConsumerRecord<byte[], byte[]>> storeChunk(Map<String, Queue<byte[]>> storage, ConsumerRecord<byte[], byte[]> record) {
-        if (record.headers().lastHeader(KafkaMessageSplitter.FINAL_CHUNK_KEY).value()[0] == (byte) 1) {
-            return storeResult(storage, record);
-        } else {
-            if (!storage.containsKey(new String(record.key()))) {
-                Queue<byte[]> queue = new LinkedList<>();
-                storage.put(new String(record.key()), queue);
+
+    private void commitOffsetsfPossible(Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> records) {
+        Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
+        records.keySet().stream().forEach(topicPartition -> {
+            if (timeBasedChunkCache.isTopicPartitionEmpty(topicPartition)) {
+                ConsumerRecord<byte[], byte[]> record = records.get(topicPartition).stream().max(Comparator.comparingLong(ConsumerRecord::offset)).get();
+                offsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
+                System.out.println("committed " + record.partition() + " with offet " + record.offset());
+                committedOffsets.put(new TopicPartition(record.topic(), record.partition()), record.offset() + 1);
             }
-            storage.get(new String(record.key())).offer(record.value());
-            return Optional.empty();
-        }
-    }
+        });
+        if (!offsets.isEmpty()) {
 
-
-    private Optional<ConsumerRecord<byte[], byte[]>> storeConsumerRecord(ConsumerRecord<byte[], byte[]> record) {
-        if (!topicsChunks.containsKey(record.topic())) {
-            Map<String, Queue<byte[]>> topicRecords = new HashMap<>();
-            topicsChunks.put(record.topic(), topicRecords);
-        }
-        Optional<ConsumerRecord<byte[], byte[]>> output = storeChunk(topicsChunks.get(record.topic()), record);
-        if (topicsChunks.get(record.topic()).isEmpty()) {
-            Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
-            offsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
             kafkaConsumer.commitSync(offsets);
         }
-        return output;
     }
 
-    private Optional<ConsumerRecord<byte[], byte[]>> storeResult(Map<String, Queue<byte[]>> storage, ConsumerRecord<byte[], byte[]> record) {
-        byte[] message;
-        int totalChunks = ByteBuffer.wrap(record.headers().lastHeader(KafkaMessageSplitter.TOTAL_CHUNKS).value()).getInt();
-        Optional output;
-        if (storage.containsKey(new String(record.key()))) {
-            Queue<byte[]> queue = storage.get(new String(record.key()));
-            queue.offer(record.value());
-            if (queue.size() == totalChunks) {
-                message = concatBytes(queue);
-                output = Optional.of(new ConsumerRecord(record.topic(), record.partition(), record.offset(), record.key(), message));
-            } else {
-                output = Optional.empty();
-            }
-            //TODO:write log notifications
-            storage.remove(new String(record.key()));
-        } else {
-            if (totalChunks == 1) {
-                message = record.value();
-                output = Optional.of(new ConsumerRecord(record.topic(), record.partition(), record.offset(), record.key(), message));
-            } else {
-                output = Optional.empty();
-                //TODO:write log notifications
-            }
-        }
-        return output;
+    public void resetCacheWithNewPartitions() {
+        //timeBasedChunkCache.cleanCache();
+       //committedOffsets.clear();
     }
 
-    private byte[] concatBytes(Queue<byte[]> bytes) {
-        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
-        while (!bytes.isEmpty()) {
-            try {
-                outputStream.write(bytes.poll());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return outputStream.toByteArray();
+    public void resetCacheWithNewPartitions(Collection<TopicPartition> topicPartitions) {
+        timeBasedChunkCache.cleanCache(topicPartitions);
+        //committedOffsets.clear();
     }
-
 
     @Override
     public Set<TopicPartition> assignment() {
@@ -150,8 +113,9 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
         List<ConsumerRecord> records = new ArrayList<>();
         Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> output = new HashMap<>();
         kafkaConsumer.poll(timeout).forEach(record -> records.add(record));
+        output.putAll(timeBasedChunkCache.removeOutdated(System.currentTimeMillis()));
         records.stream()
-                .map(this::storeConsumerRecord)
+                .map(record -> timeBasedChunkCache.put(record))
                 .filter(consumerRecord -> ((Optional) consumerRecord).isPresent())
                 .map(consumerRecord -> ((Optional) consumerRecord).get())
                 .forEach(record -> {
@@ -162,6 +126,7 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
                     }
                     output.get(topicPartition).add(castedRecord);
                 });
+        commitOffsetsfPossible(output);
         return new ConsumerRecords<>(output);
 
     }
