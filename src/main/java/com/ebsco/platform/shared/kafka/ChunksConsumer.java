@@ -55,7 +55,7 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
 
     public void resetCacheWithNewPartitions() {
         //timeBasedChunkCache.cleanCache();
-       //committedOffsets.clear();
+        //committedOffsets.clear();
     }
 
     public void resetCacheWithNewPartitions(Collection<TopicPartition> topicPartitions) {
@@ -184,27 +184,27 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
 
     @Override
     public long position(TopicPartition partition) {
-        return 0;
+        return kafkaConsumer.position(partition);
     }
 
     @Override
     public long position(TopicPartition partition, Duration timeout) {
-        return 0;
+        return kafkaConsumer.position(partition, timeout);
     }
 
     @Override
     public OffsetAndMetadata committed(TopicPartition partition) {
-        return null;
+        return kafkaConsumer.committed(partition);
     }
 
     @Override
     public OffsetAndMetadata committed(TopicPartition partition, Duration timeout) {
-        return null;
+        return kafkaConsumer.committed(partition, timeout);
     }
 
     @Override
     public Map<MetricName, ? extends Metric> metrics() {
-        return null;
+        return kafkaConsumer.metrics();
     }
 
     @Override
@@ -214,81 +214,81 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
 
     @Override
     public List<PartitionInfo> partitionsFor(String topic, Duration timeout) {
-        return null;
+        return kafkaConsumer.partitionsFor(topic, timeout);
     }
 
     @Override
     public Map<String, List<PartitionInfo>> listTopics() {
-        return null;
+        return kafkaConsumer.listTopics();
     }
 
     @Override
     public Map<String, List<PartitionInfo>> listTopics(Duration timeout) {
-        return null;
+        return kafkaConsumer.listTopics(timeout);
     }
 
     @Override
     public Set<TopicPartition> paused() {
-        return null;
+        return kafkaConsumer.paused();
     }
 
     @Override
     public void pause(Collection<TopicPartition> partitions) {
-
+        kafkaConsumer.pause(partitions);
     }
 
     @Override
     public void resume(Collection<TopicPartition> partitions) {
-
+        kafkaConsumer.resume(partitions);
     }
 
     @Override
     public Map<TopicPartition, OffsetAndTimestamp> offsetsForTimes(Map<TopicPartition, Long> timestampsToSearch) {
-        return null;
+        return kafkaConsumer.offsetsForTimes(timestampsToSearch);
     }
 
     @Override
     public Map<TopicPartition, OffsetAndTimestamp> offsetsForTimes(Map<TopicPartition, Long> timestampsToSearch, Duration timeout) {
-        return null;
+        return kafkaConsumer.offsetsForTimes(timestampsToSearch, timeout);
     }
 
     @Override
     public Map<TopicPartition, Long> beginningOffsets(Collection<TopicPartition> partitions) {
-        return null;
+        return kafkaConsumer.beginningOffsets(partitions);
     }
 
     @Override
     public Map<TopicPartition, Long> beginningOffsets(Collection<TopicPartition> partitions, Duration timeout) {
-        return null;
+        return kafkaConsumer.beginningOffsets(partitions, timeout);
     }
 
     @Override
     public Map<TopicPartition, Long> endOffsets(Collection<TopicPartition> partitions) {
-        return null;
+        return kafkaConsumer.endOffsets(partitions);
     }
 
     @Override
     public Map<TopicPartition, Long> endOffsets(Collection<TopicPartition> partitions, Duration timeout) {
-        return null;
+        return kafkaConsumer.endOffsets(partitions, timeout);
     }
 
     @Override
     public void close() {
-
+        kafkaConsumer.close();
     }
 
     @Override
     public void close(long timeout, TimeUnit unit) {
-
+        kafkaConsumer.close(timeout, unit);
     }
 
     @Override
     public void close(Duration timeout) {
-
+        kafkaConsumer.close(timeout);
     }
 
     @Override
     public void wakeup() {
-
+        kafkaConsumer.wakeup();
     }
 }
