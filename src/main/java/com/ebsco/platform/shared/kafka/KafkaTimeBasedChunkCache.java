@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 public class KafkaTimeBasedChunkCache {
-    private Map<TopicPartitionKey, Queue<ConsumerRecord<byte[], byte[]>>> topicsChunks = new HashMap<>();
+    public Map<TopicPartitionKey, Queue<ConsumerRecord<byte[], byte[]>>> topicsChunks = new HashMap<>();
     private Map<TopicPartitionKey, Long> keyLifespans = new HashMap<>();
     private Set<TopicPartitionKey> keysToIgnore = new HashSet<>();
     private Long cacheLifespan;
@@ -112,6 +112,7 @@ public class KafkaTimeBasedChunkCache {
     }
 
     public void cleanCache(Collection<TopicPartition> topicPartitions) {
+        System.out.println("Cleaning cache of "+ topicsChunks.keySet() +" instances");
         List<TopicPartitionKey> keysToDelete = topicsChunks.keySet().stream().filter(key -> !topicPartitions.contains(key.getTopicPartition())).collect(Collectors.toList());
         keysToDelete.forEach(key -> {
             topicsChunks.remove(key);

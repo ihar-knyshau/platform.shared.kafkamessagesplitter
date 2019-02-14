@@ -27,8 +27,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Runner {
-    private static final String chunkTopic = "test23";
-    private static final String consumerGroup = "test23";
+    private static final String chunkTopic = "test27";
+    private static final String consumerGroup = "test27";
     private static final String kafkaUri = "quickstart.cloudera:9092";
     int recordsCount = 0;
     int unsubscribed = 0;
@@ -72,7 +72,7 @@ public class Runner {
 
         System.out.println(Duration.between(instant, Instant.now()));
 
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < 2; i++) {
             new Thread(() -> {
                 Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(kafkaUri, consumerGroup);
 
@@ -81,14 +81,15 @@ public class Runner {
                 ConsumerRecords<byte[], byte[]> consumerRecords;
 
                 do {
-//                    if (ThreadLocalRandom.current().nextInt(1, 10 + 1) > 9 && unsubscribed < 4) {
-//                        consumer.unsubscribe();
-//                        unsubscribed++;
-//                        break;
-//                    } else {
+                    if (recordsCount > 30 && unsubscribed < 1) {
+                        unsubscribed++;
+                        consumer.unsubscribe();
+                        System.out.println("UNSUBSCRIBE of "+consumer+"!!!111");
+                        break;
+                    } else {
                         consumerRecords = consumer.poll(Duration.ofMinutes(1));
                         recordsCount += consumerRecords.count();
-                        System.out.println("Records consumed: " + recordsCount + "/" + list.size());
+                        System.out.println("Records consumed by " + consumer + ": " + recordsCount + "/" + list.size());
                         consumerRecords.records(chunkTopic).iterator().forEachRemaining(record -> {
                             String composed = null;
                             try {
@@ -98,7 +99,7 @@ public class Runner {
                             }
                             checkFiles(list, composed);
                         });
-//                    }
+                    }
                 } while (list.values().stream().anyMatch(e -> e == 0));
 
             }).start();
@@ -124,10 +125,14 @@ public class Runner {
         @Override
         public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
             //chunksConsumer.resetCacheWithNewPartitions();
+            System.out.println("Repartitioning for consumer"+chunksConsumer+" with cache of "+chunksConsumer.timeBasedChunkCache.topicsChunks.keySet()+" instances");
         }
 
         @Override
         public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+            System.out.println("RESET!!!111");
+            System.out.println(chunksConsumer.subscription());
+            System.out.println("Start rading from: "+chunksConsumer.beginningOffsets(partitions));
             chunksConsumer.resetCacheWithNewPartitions(partitions);
         }
     }
