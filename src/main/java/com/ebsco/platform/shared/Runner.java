@@ -16,20 +16,14 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
+import java.util.*;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class Runner {
-    private static final String chunkTopic = "test27";
-    private static final String consumerGroup = "test27";
-    private static final String kafkaUri = "quickstart.cloudera:9092";
+    private static final String chunkTopic = "test35";
+    private static final String consumerGroup = "test35";
+    private static final String kafkaUri = "localhost:9092";
     int recordsCount = 0;
     int unsubscribed = 0;
 
@@ -84,7 +78,7 @@ public class Runner {
                     if (recordsCount > 30 && unsubscribed < 1) {
                         unsubscribed++;
                         consumer.unsubscribe();
-                        System.out.println("UNSUBSCRIBE of "+consumer+"!!!111");
+                        System.out.println("UNSUBSCRIBE of " + consumer + "!!!111");
                         break;
                     } else {
                         consumerRecords = consumer.poll(Duration.ofMinutes(1));
@@ -107,14 +101,14 @@ public class Runner {
     }
 
     private void checkFiles(Map<String, Integer> list, String composed) {
-            if (!list.containsKey(composed)) {
-                throw new IllegalStateException("fail");
-            } else {
-                list.put(composed, list.get(composed)+1);
-            }
+        if (!list.containsKey(composed)) {
+            throw new IllegalStateException("fail");
+        } else {
+            list.put(composed, list.get(composed) + 1);
+        }
     }
 
-    class ChunkRebalanceListener implements ConsumerRebalanceListener{
+    class ChunkRebalanceListener implements ConsumerRebalanceListener {
 
         private ChunksConsumer chunksConsumer;
 
@@ -124,16 +118,11 @@ public class Runner {
 
         @Override
         public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-            //chunksConsumer.resetCacheWithNewPartitions();
-            System.out.println("Repartitioning for consumer"+chunksConsumer+" with cache of "+chunksConsumer.timeBasedChunkCache.topicsChunks.keySet()+" instances");
         }
 
         @Override
         public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-            System.out.println("RESET!!!111");
-            System.out.println(chunksConsumer.subscription());
-            System.out.println("Start rading from: "+chunksConsumer.beginningOffsets(partitions));
-            chunksConsumer.resetCacheWithNewPartitions(partitions);
+            chunksConsumer.setNewCachePartitions(partitions);
         }
     }
 }

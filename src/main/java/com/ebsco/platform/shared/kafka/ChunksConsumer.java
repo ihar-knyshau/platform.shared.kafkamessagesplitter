@@ -16,9 +16,9 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
     public static final String CACHE_LIFESPAN_PROPERTY = "consumer.cache.lifespan";
 
     private KafkaConsumer<byte[], byte[]> kafkaConsumer;
-    public KafkaTimeBasedChunkCache timeBasedChunkCache;
-    private Map<TopicPartition, Long> committedOffsets = new HashMap<>();
-    private final Long DEFAULT_CACHE_LIFESPAN = 1000 * 60 * 3L;//10 mins
+    private KafkaTimeBasedChunkCache timeBasedChunkCache;
+    private Map<TopicPartition, Long> possibleOffsets = new HashMap<>();
+    private final Long DEFAULT_CACHE_LIFESPAN = 1000 * 60 * 3L;//3 mins
 
 
     public ChunksConsumer(Map<String, Object> configs) {
@@ -37,31 +37,39 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
     }
 
 
-    private void commitOffsetsfPossible(Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> records) {
+    private void commitOffsetsIfPossible(Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> records) {
         Map<TopicPartition, OffsetAndMetadata> offsets = new HashMap<>();
         records.keySet().stream().forEach(topicPartition -> {
+            //Get the maximal offset from completed\outdated records
+            ConsumerRecord<byte[], byte[]> record = records.get(topicPartition).stream().max(Comparator.comparingLong(ConsumerRecord::offset)).get();
+            //We need only to increase offset
+            if (!possibleOffsets.containsKey(topicPartition) || possibleOffsets.get(topicPartition) < record.offset()) {
+                possibleOffsets.put(topicPartition, record.offset() + 1);
+            }
+            //Check if we can commit the new offset
             if (timeBasedChunkCache.isTopicPartitionEmpty(topicPartition)) {
-                ConsumerRecord<byte[], byte[]> record = records.get(topicPartition).stream().max(Comparator.comparingLong(ConsumerRecord::offset)).get();
-                offsets.put(new TopicPartition(record.topic(), record.partition()), new OffsetAndMetadata(record.offset() + 1));
-                System.out.println("Consumer "+this+" committed  to partition" + record.partition() + " with offset " + kafkaConsumer.beginningOffsets(Collections.singletonList(topicPartition)) + " to " + record.offset());
-                committedOffsets.put(new TopicPartition(record.topic(), record.partition()), record.offset() + 1);
+                if (!possibleOffsets.containsKey(topicPartition) || possibleOffsets.get(topicPartition) <= record.offset() + 1) {
+                    offsets.put(topicPartition, new OffsetAndMetadata(record.offset() + 1));
+                } else {
+                    //This execution branch is reachable in case we have outdated records as input and we need to commit the offset of the last constructed message
+                    offsets.put(topicPartition, new OffsetAndMetadata(possibleOffsets.get(topicPartition)));
+                }
             }
         });
         if (!offsets.isEmpty()) {
-
             kafkaConsumer.commitSync(offsets);
         }
     }
 
-    public void resetCacheWithNewPartitions() {
-        //timeBasedChunkCache.cleanCache();
-        //committedOffsets.clear();
+    public void resetCache() {
+        timeBasedChunkCache.cleanCache();
+        possibleOffsets.clear();
     }
 
-    public void resetCacheWithNewPartitions(Collection<TopicPartition> topicPartitions) {
-        System.out.println("New Partitions assigned "+topicPartitions+ "to consumer"+this+". Partitions committed to: "+committedOffsets.keySet());
-        timeBasedChunkCache.cleanCache(topicPartitions);
-        //committedOffsets.clear();
+    public void setNewCachePartitions(Collection<TopicPartition> topicPartitions) {
+        timeBasedChunkCache.setNewPartitions(topicPartitions);
+        topicPartitions.forEach(topicPartition -> possibleOffsets.remove(topicPartition));
+
     }
 
     @Override
@@ -127,7 +135,7 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
                     }
                     output.get(topicPartition).add(castedRecord);
                 });
-        commitOffsetsfPossible(output);
+        commitOffsetsIfPossible(output);
         return new ConsumerRecords<>(output);
 
     }

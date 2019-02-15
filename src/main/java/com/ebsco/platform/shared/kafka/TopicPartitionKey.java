@@ -26,6 +26,10 @@ public class TopicPartitionKey {
     public int hashCode() {
         return Objects.hash(topicPartition.topic(), topicPartition.partition(), key);
     }
+    @Override
+    public String toString(){
+        return topicPartition.toString()+" "+key;
+    }
 
     public String getTopic() {
         return topicPartition.topic();

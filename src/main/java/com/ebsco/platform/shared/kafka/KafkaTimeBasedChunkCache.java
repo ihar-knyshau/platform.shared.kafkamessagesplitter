@@ -6,20 +6,11 @@ import org.apache.kafka.common.TopicPartition;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Queue;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class KafkaTimeBasedChunkCache {
-    public Map<TopicPartitionKey, Queue<ConsumerRecord<byte[], byte[]>>> topicsChunks = new HashMap<>();
+    private Map<TopicPartitionKey, Queue<ConsumerRecord<byte[], byte[]>>> topicsChunks = new HashMap<>();
     private Map<TopicPartitionKey, Long> keyLifespans = new HashMap<>();
     private Set<TopicPartitionKey> keysToIgnore = new HashSet<>();
     private Long cacheLifespan;
@@ -36,17 +27,23 @@ public class KafkaTimeBasedChunkCache {
     }
 
     private Optional<ConsumerRecord<byte[], byte[]>> storeChunk(TopicPartitionKey key, ConsumerRecord<byte[], byte[]> record, int number, int total) {
+        //In case we have 1 chunk only, no need to put in cache
         if (number == total && total == 1) {
             return Optional.of(record);
         }
+
+        //In case we get the last chunk of a sequence we ignore, we need to remove the key from list of ignored keys
         if (number == total && keysToIgnore.contains(key)) {
             keysToIgnore.remove(key);
             return Optional.ofNullable(null);
         }
+
+        //If we picked up a chunk from message body, we need to ignore it,as the head hasn't been transferred
         if (number > 1 && !topicsChunks.containsKey(key)) {
             keysToIgnore.add(key);
             return Optional.ofNullable(null);
         }
+        //If we picked up last chunk, we need to construct message and return it
         if (number == total) {
             Queue<ConsumerRecord<byte[], byte[]>> chunks = topicsChunks.remove(key);
             keyLifespans.remove(key);
@@ -57,6 +54,8 @@ public class KafkaTimeBasedChunkCache {
                 return Optional.ofNullable(null);
             }
         }
+
+        //If we picked up message head, we need to put it in cache
         if (!keysToIgnore.contains(key)) {
             if (!topicsChunks.containsKey(key)) {
                 topicsChunks.put(key, new LinkedList<>());
@@ -85,7 +84,7 @@ public class KafkaTimeBasedChunkCache {
     }
 
     public boolean isTopicPartitionEmpty(TopicPartition topicPartition) {
-        return topicsChunks.keySet().stream().map(key -> key.getTopicPartition()).anyMatch(key -> key.equals(topicPartition));
+        return !topicsChunks.keySet().stream().map(key -> key.getTopicPartition()).anyMatch(key -> key.equals(topicPartition));
     }
 
     public Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> removeOutdated(Long timestamp) {
@@ -111,8 +110,7 @@ public class KafkaTimeBasedChunkCache {
         keyLifespans.clear();
     }
 
-    public void cleanCache(Collection<TopicPartition> topicPartitions) {
-        System.out.println("Cleaning cache of "+ topicsChunks.keySet() +" instances");
+    public void setNewPartitions(Collection<TopicPartition> topicPartitions) {
         List<TopicPartitionKey> keysToDelete = topicsChunks.keySet().stream().filter(key -> !topicPartitions.contains(key.getTopicPartition())).collect(Collectors.toList());
         keysToDelete.forEach(key -> {
             topicsChunks.remove(key);
