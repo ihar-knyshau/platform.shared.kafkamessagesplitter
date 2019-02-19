@@ -84,7 +84,7 @@ public class KafkaTimeBasedChunkCache {
     }
 
     public boolean isTopicPartitionEmpty(TopicPartition topicPartition) {
-        return !topicsChunks.keySet().stream().map(key -> key.getTopicPartition()).anyMatch(key -> key.equals(topicPartition));
+        return !topicsChunks.keySet().stream().anyMatch(key -> key.getTopicPartition().equals(topicPartition));
     }
 
     public Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> removeOutdated(Long timestamp) {

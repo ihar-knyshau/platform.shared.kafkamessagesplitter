@@ -32,7 +32,7 @@ public class Runner {
     }
 
     private void consume() throws IOException {
-        Instant instant = Instant.now();
+      /*  Instant instant = Instant.now();
         System.out.println(instant);
         List<String> files = IOUtils.readLines(Objects.requireNonNull(Runner.class.getClassLoader().getResourceAsStream("asimov_txt")), Charsets.UTF_8);
 
@@ -93,6 +93,46 @@ public class Runner {
 //
 //            }).start();
 //        }
+        for (int i = 0; i < 2; i++) {
+            new Thread(() -> {
+                Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(kafkaUri, consumerGroup);
+
+                consumer.subscribe(Collections.singletonList(chunkTopic), new ChunkRebalanceListener((ChunksConsumer) consumer));
+
+                ConsumerRecords<byte[], byte[]> consumerRecords;
+
+                do {
+                    if (recordsCount > 30 && unsubscribed < 1) {
+                        unsubscribed++;
+                        consumer.unsubscribe();
+                        System.out.println("UNSUBSCRIBE of " + consumer + "!!!111");
+                        break;
+                    } else {
+                        consumerRecords = consumer.poll(Duration.ofMinutes(1));
+                        recordsCount += consumerRecords.count();
+                        System.out.println("Records consumed by " + consumer + ": " + recordsCount + "/" + list.size());
+                        consumerRecords.records(chunkTopic).iterator().forEachRemaining(record -> {
+                            String composed = null;
+                            try {
+                                composed = IOUtils.toString(record.value(), "UTF-8");
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                            checkFiles(list, composed);
+                        });
+                    }
+                } while (list.values().stream().anyMatch(e -> e == 0));
+
+            }).start();
+        }*/
+    }
+
+    private void checkFiles(Map<String, Integer> list, String composed) {
+        if (!list.containsKey(composed)) {
+            throw new IllegalStateException("fail");
+        } else {
+            list.put(composed, list.get(composed) + 1);
+        }
     }
 
 //    private void checkFiles(Map<String, Integer> list, String composed) {

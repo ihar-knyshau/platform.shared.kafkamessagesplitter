@@ -1,4 +1,4 @@
 [
-  "com.ebsco.platform.shared.stage.origin.SampleDSource",
-  "com.ebsco.platform.shared.stage.origin.Groups"
+  "com.ebsco.platform.shared.streamsets.stage.origin.SampleDSource",
+  "com.ebsco.platform.shared.streamsets.Groups"
 ]

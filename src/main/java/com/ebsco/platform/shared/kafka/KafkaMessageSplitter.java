@@ -61,7 +61,7 @@ public class KafkaMessageSplitter {
         return recordList;
     }
 
-    private Iterable<Header> createChunkHeaders(byte[] uuid, int currentChunk, int totalChunks, boolean finalChunk) {
+    public Iterable<Header> createChunkHeaders(byte[] uuid, int currentChunk, int totalChunks, boolean finalChunk) {
         List<Header> headers = new LinkedList<>();
         RecordHeader uuidHeader = new RecordHeader(UUID_KEY, uuid);
         headers.add(uuidHeader);
