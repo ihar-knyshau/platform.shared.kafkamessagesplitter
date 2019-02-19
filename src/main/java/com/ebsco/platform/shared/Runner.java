@@ -27,78 +27,78 @@ public class Runner {
     int recordsCount = 0;
     int unsubscribed = 0;
 
-    public static void main(String[] args) throws IOException {
-        new Runner().consume();
-    }
+//    public static void main(String[] args) throws IOException {
+//        new Runner().consume();
+//    }
 
-    private void consume() throws IOException {
-        Instant instant = Instant.now();
-        System.out.println(instant);
-        List<String> files = IOUtils.readLines(Objects.requireNonNull(Runner.class.getClassLoader().getResourceAsStream("asimov_txt")), Charsets.UTF_8);
-
-        Map<String, Integer> list = new HashMap<>();
-
-        for (String file : files) {
-            Producer<byte[], byte[]> producer = KafkaFactory.createProducer(kafkaUri);
-            new Thread(() -> {
-                InputStream inputStream = Runner.class.getResourceAsStream("/asimov_txt/" + file);
-                String strMessage = null;
-                try {
-                    strMessage = IOUtils.toString(inputStream, UTF_8);
-                } catch (IOException e) {
-                    throw new IllegalStateException(e);
-                }
-                KafkaMessageSplitter kafkaMessageSplitter = new KafkaMessageSplitter(1024);
-                List<byte[]> chunks = kafkaMessageSplitter.splitMessage(strMessage);
-                List<ProducerRecord<byte[], byte[]>> records = kafkaMessageSplitter.createChunkRecords(chunks, chunkTopic);
-
-                for (ProducerRecord<byte[], byte[]> record : records) {
-//                    try {
-//                        Thread.sleep(ThreadLocalRandom.current().nextInt(1, 10 + 1));
-//                    } catch (InterruptedException e) {
-//                        e.printStackTrace();
+//    private void consume() throws IOException {
+//        Instant instant = Instant.now();
+//        System.out.println(instant);
+//        List<String> files = IOUtils.readLines(Objects.requireNonNull(Runner.class.getClassLoader().getResourceAsStream("asimov_txt")), Charsets.UTF_8);
+//
+//        Map<String, Integer> list = new HashMap<>();
+//
+//        for (String file : files) {
+//            Producer<byte[], byte[]> producer = KafkaFactory.createProducer(kafkaUri);
+//            new Thread(() -> {
+//                InputStream inputStream = Runner.class.getResourceAsStream("/asimov_txt/" + file);
+//                String strMessage = null;
+//                try {
+//                    strMessage = IOUtils.toString(inputStream, UTF_8);
+//                } catch (IOException e) {
+//                    throw new IllegalStateException(e);
+//                }
+//                KafkaMessageSplitter kafkaMessageSplitter = new KafkaMessageSplitter(1024);
+//                List<byte[]> chunks = kafkaMessageSplitter.splitMessage(strMessage);
+//                List<ProducerRecord<byte[], byte[]>> records = kafkaMessageSplitter.createChunkRecords(chunks, chunkTopic);
+//
+//                for (ProducerRecord<byte[], byte[]> record : records) {
+////                    try {
+////                        Thread.sleep(ThreadLocalRandom.current().nextInt(1, 10 + 1));
+////                    } catch (InterruptedException e) {
+////                        e.printStackTrace();
+////                    }
+//                    producer.send(record);
+//                }
+//                list.put(strMessage, 0);
+//            }).start();
+//        }
+//
+//        System.out.println(Duration.between(instant, Instant.now()));
+//
+//        for (int i = 0; i < 2; i++) {
+//            new Thread(() -> {
+//                Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(kafkaUri, consumerGroup);
+//
+//                consumer.subscribe(Collections.singletonList(chunkTopic), new ChunkRebalanceListener((ChunksConsumer) consumer));
+//
+//                ConsumerRecords<byte[], byte[]> consumerRecords;
+//
+//                do {
+//                    if (recordsCount > 30 && unsubscribed < 1) {
+//                        unsubscribed++;
+//                        consumer.unsubscribe();
+//                        System.out.println("UNSUBSCRIBE of " + consumer + "!!!111");
+//                        break;
+//                    } else {
+//                        consumerRecords = consumer.poll(Duration.ofMinutes(1));
+//                        recordsCount += consumerRecords.count();
+//                        System.out.println("Records consumed by " + consumer + ": " + recordsCount + "/" + list.size());
+//                        consumerRecords.records(chunkTopic).iterator().forEachRemaining(record -> {
+//                            String composed = null;
+//                            try {
+//                                composed = IOUtils.toString(record.value(), "UTF-8");
+//                            } catch (IOException e) {
+//                                e.printStackTrace();
+//                            }
+//                            checkFiles(list, composed);
+//                        });
 //                    }
-                    producer.send(record);
-                }
-                list.put(strMessage, 0);
-            }).start();
-        }
-
-        System.out.println(Duration.between(instant, Instant.now()));
-
-        for (int i = 0; i < 2; i++) {
-            new Thread(() -> {
-                Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(kafkaUri, consumerGroup);
-
-                consumer.subscribe(Collections.singletonList(chunkTopic), new ChunkRebalanceListener((ChunksConsumer) consumer));
-
-                ConsumerRecords<byte[], byte[]> consumerRecords;
-
-                do {
-                    if (recordsCount > 30 && unsubscribed < 1) {
-                        unsubscribed++;
-                        consumer.unsubscribe();
-                        System.out.println("UNSUBSCRIBE of " + consumer + "!!!111");
-                        break;
-                    } else {
-                        consumerRecords = consumer.poll(Duration.ofMinutes(1));
-                        recordsCount += consumerRecords.count();
-                        System.out.println("Records consumed by " + consumer + ": " + recordsCount + "/" + list.size());
-                        consumerRecords.records(chunkTopic).iterator().forEachRemaining(record -> {
-                            String composed = null;
-                            try {
-                                composed = IOUtils.toString(record.value(), "UTF-8");
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                            checkFiles(list, composed);
-                        });
-                    }
-                } while (list.values().stream().anyMatch(e -> e == 0));
-
-            }).start();
-        }
-    }
+//                } while (list.values().stream().anyMatch(e -> e == 0));
+//
+//            }).start();
+//        }
+//    }
 
     private void checkFiles(Map<String, Integer> list, String composed) {
         if (!list.containsKey(composed)) {
@@ -108,21 +108,21 @@ public class Runner {
         }
     }
 
-    class ChunkRebalanceListener implements ConsumerRebalanceListener {
-
-        private ChunksConsumer chunksConsumer;
-
-        public ChunkRebalanceListener(ChunksConsumer chunksConsumer) {
-            this.chunksConsumer = chunksConsumer;
-        }
-
-        @Override
-        public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
-        }
-
-        @Override
-        public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
-            chunksConsumer.setNewCachePartitions(partitions);
-        }
-    }
+//    class ChunkRebalanceListener implements ConsumerRebalanceListener {
+//
+//        private ChunksConsumer chunksConsumer;
+//
+//        public ChunkRebalanceListener(ChunksConsumer chunksConsumer) {
+//            this.chunksConsumer = chunksConsumer;
+//        }
+//
+//        @Override
+//        public void onPartitionsRevoked(Collection<TopicPartition> partitions) {
+//        }
+//
+//        @Override
+//        public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
+//            chunksConsumer.setNewCachePartitions(partitions);
+//        }
+//    }
 }
