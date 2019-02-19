@@ -69,12 +69,6 @@ public abstract class SampleSource  extends BasePushSource {
   private Thread thread;
 
   @Override
-  public List<ConfigIssue> init(Info info, PushSource.Context context) {
-    initThread();
-    return super.init(info, context);
-  }
-
-  @Override
   protected List<ConfigIssue> init() {
     initThread();
     return super.init();
@@ -113,8 +107,10 @@ public abstract class SampleSource  extends BasePushSource {
   @Override
   public void produce(Map<String, String> lastOffsets, int maxBatchSize) throws StageException {
     try {
+      LOG.warn("STARTED");
       thread.start();
       latch.await();
+      LOG.warn("FINISHED");
     } catch (InterruptedException e) {
       throw new RuntimeException("Thread was interrupted");
     }
@@ -123,9 +119,11 @@ public abstract class SampleSource  extends BasePushSource {
   /** {@inheritDoc} */
   @Override
   public void destroy() {
+    LOG.warn("STARTED DESTROY");
     // Clean up any open resources.
     thread.interrupt();
     super.destroy();
+    LOG.warn("FINISHED DESTROY");
   }
 
 

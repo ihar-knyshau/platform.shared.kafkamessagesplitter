@@ -1,9 +1,41 @@
-plugins {
-    id 'java'
+buildscript {
+    ext.sdc_api_version = '3.1.0.0'
+    ext.slf4j_version = '1.7.25'
+    ext.junit_version = '4.12'
+    repositories {
+        mavenCentral()
+    }
 }
 
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
+apply plugin: 'java'
+apply plugin: 'distribution'
+apply plugin: 'maven'
+
+group = 'com.epam'
+version = '1.0.0-SNAPSHOT'
+
+description = """StreamSets Data Collector stage with kafka split message consumer."""
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+distributions {
+    main {
+        contents {
+            into('lib') {
+                from(jar)
+                from(project.configurations.runtime)
+            }
+            exclude("**/log4j*.jar")
+            exclude("**/metrics-core*.jar")
+            eachFile { details ->
+                if (details.name == jar.archiveName && !details.relativePath.toString().contains('/lib')) {
+                    details.exclude()
+                }
+            }
+        }
+    }
+}
 
 repositories {
     mavenCentral()
@@ -11,6 +43,12 @@ repositories {
 
 dependencies {
     compile group: 'org.apache.kafka', name: 'kafka-clients', version: '2.0.0'
-    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
     compile group: 'commons-io', name: 'commons-io', version: '2.5'
+    compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'
+    compileOnly "com.streamsets:streamsets-datacollector-api:$sdc_api_version"
+    compileOnly "com.streamsets:streamsets-datacollector-sdk:$sdc_api_version"
+    compileOnly "org.slf4j:slf4j-api:$slf4j_version"
+    compileOnly "org.slf4j:slf4j-log4j12:$slf4j_version"
+    testCompile "junit:junit:$junit_version"
+    testCompile "com.streamsets:streamsets-datacollector-sdk:$sdc_api_version"
 }

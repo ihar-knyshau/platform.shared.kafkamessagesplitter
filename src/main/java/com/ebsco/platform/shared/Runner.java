@@ -27,45 +27,40 @@ public class Runner {
     int recordsCount = 0;
     int unsubscribed = 0;
 
-//    public static void main(String[] args) throws IOException {
-//        new Runner().consume();
-//    }
+    public static void main(String[] args) throws IOException {
+        new Runner().consume();
+    }
 
-//    private void consume() throws IOException {
-//        Instant instant = Instant.now();
-//        System.out.println(instant);
-//        List<String> files = IOUtils.readLines(Objects.requireNonNull(Runner.class.getClassLoader().getResourceAsStream("asimov_txt")), Charsets.UTF_8);
-//
+    private void consume() throws IOException {
+        Instant instant = Instant.now();
+        System.out.println(instant);
+        List<String> files = IOUtils.readLines(Objects.requireNonNull(Runner.class.getClassLoader().getResourceAsStream("asimov_txt")), Charsets.UTF_8);
+
 //        Map<String, Integer> list = new HashMap<>();
-//
-//        for (String file : files) {
-//            Producer<byte[], byte[]> producer = KafkaFactory.createProducer(kafkaUri);
+
+        for (String file : files) {
+            Producer<byte[], byte[]> producer = KafkaFactory.createProducer(kafkaUri);
 //            new Thread(() -> {
-//                InputStream inputStream = Runner.class.getResourceAsStream("/asimov_txt/" + file);
-//                String strMessage = null;
-//                try {
-//                    strMessage = IOUtils.toString(inputStream, UTF_8);
-//                } catch (IOException e) {
-//                    throw new IllegalStateException(e);
-//                }
-//                KafkaMessageSplitter kafkaMessageSplitter = new KafkaMessageSplitter(1024);
-//                List<byte[]> chunks = kafkaMessageSplitter.splitMessage(strMessage);
-//                List<ProducerRecord<byte[], byte[]>> records = kafkaMessageSplitter.createChunkRecords(chunks, chunkTopic);
-//
-//                for (ProducerRecord<byte[], byte[]> record : records) {
-////                    try {
-////                        Thread.sleep(ThreadLocalRandom.current().nextInt(1, 10 + 1));
-////                    } catch (InterruptedException e) {
-////                        e.printStackTrace();
-////                    }
-//                    producer.send(record);
-//                }
+                InputStream inputStream = Runner.class.getResourceAsStream("/asimov_txt/" + file);
+                String strMessage = null;
+                try {
+                    strMessage = IOUtils.toString(inputStream, UTF_8);
+                } catch (IOException e) {
+                    throw new IllegalStateException(e);
+                }
+                KafkaMessageSplitter kafkaMessageSplitter = new KafkaMessageSplitter(1024);
+                List<byte[]> chunks = kafkaMessageSplitter.splitMessage(strMessage);
+                List<ProducerRecord<byte[], byte[]>> records = kafkaMessageSplitter.createChunkRecords(chunks, chunkTopic);
+
+                for (ProducerRecord<byte[], byte[]> record : records) {
+                    producer.send(record);
+                }
 //                list.put(strMessage, 0);
 //            }).start();
-//        }
-//
-//        System.out.println(Duration.between(instant, Instant.now()));
-//
+        }
+
+        System.out.println(Duration.between(instant, Instant.now()));
+
 //        for (int i = 0; i < 2; i++) {
 //            new Thread(() -> {
 //                Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(kafkaUri, consumerGroup);
@@ -98,15 +93,15 @@ public class Runner {
 //
 //            }).start();
 //        }
-//    }
-
-    private void checkFiles(Map<String, Integer> list, String composed) {
-        if (!list.containsKey(composed)) {
-            throw new IllegalStateException("fail");
-        } else {
-            list.put(composed, list.get(composed) + 1);
-        }
     }
+
+//    private void checkFiles(Map<String, Integer> list, String composed) {
+//        if (!list.containsKey(composed)) {
+//            throw new IllegalStateException("fail");
+//        } else {
+//            list.put(composed, list.get(composed) + 1);
+//        }
+//    }
 
 //    class ChunkRebalanceListener implements ConsumerRebalanceListener {
 //
