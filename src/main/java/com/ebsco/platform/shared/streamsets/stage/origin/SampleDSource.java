@@ -45,7 +45,7 @@ public class SampleDSource extends SampleSource {
       defaultValue = "localhost",
       label = "Kafka Host",
       displayPosition = 10,
-      group = "KAFKA_SPLIT_DEMO"
+      group = "Kafka"
   )
   public String kafkaHost;
 
@@ -55,7 +55,7 @@ public class SampleDSource extends SampleSource {
           defaultValue = "9092",
           label = "Kafka Port",
           displayPosition = 10,
-          group = "KAFKA_SPLIT_DEMO"
+          group = "Kafka"
   )
   public String kafkaPort;
 
@@ -65,7 +65,7 @@ public class SampleDSource extends SampleSource {
           defaultValue = "test",
           label = "Kafka Topic",
           displayPosition = 10,
-          group = "KAFKA_SPLIT_DEMO"
+          group = "Kafka"
   )
   public String kafkaTopic;
 
@@ -75,7 +75,7 @@ public class SampleDSource extends SampleSource {
           defaultValue = "test",
           label = "Kafka Consumer Group",
           displayPosition = 10,
-          group = "KAFKA_SPLIT_DEMO"
+          group = "Kafka"
   )
   public String kafkaConsumerGroup;
 
@@ -85,7 +85,7 @@ public class SampleDSource extends SampleSource {
           defaultValue = "600000",
           label = "Kafka Consumer Group",
           displayPosition = 10,
-          group = "KAFKA_SPLIT_DEMO"
+          group = "Kafka"
   )
   public Long kafkaCacheLifespan;
 
