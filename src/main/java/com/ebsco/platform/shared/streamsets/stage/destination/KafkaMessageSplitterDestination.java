@@ -102,7 +102,7 @@ public abstract class KafkaMessageSplitterDestination extends BaseTarget {
     public void write(Record record) throws OnRecordErrorException {
         // wait until all the previous messages has been consumed (if configured)
         //waitForTopicBeenConsumed(record);
-        LOG.warn("Write to topic "+getTopic()+" content:" +record.get("/content").getValueAsString());
+//        LOG.warn("Write to topic "+getTopic()+" content:" +record.get("/content").getValueAsString());
         List<ProducerRecord<byte[], byte[]>> kafkaRecords = messageSplitter.createChunkRecords(messageSplitter.splitMessage(record.get("/content").getValueAsString()), getTopic());
         kafkaRecords.forEach(kafkaRecord -> producer.send(kafkaRecord));
     }
