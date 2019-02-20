@@ -30,7 +30,7 @@ import com.streamsets.pipeline.api.StageDef;
     version = 1,
     label = "Kafka Split Message",
     description = "",
-    icon = "default.png",
+//    icon = "default.png",
     execution = ExecutionMode.STANDALONE,
     recordsByRef = true,
     onlineHelpRefUrl = ""

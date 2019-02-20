@@ -41,7 +41,7 @@ repositories {
 }
 
 dependencies {
-    compile group: 'org.apache.kafka', name: 'kafka-clients', version: '2.0.0'
+    compile group: 'org.apache.kafka', name: 'kafka-clients', version: '2.1.0'
     compile group: 'commons-io', name: 'commons-io', version: '2.5'
     compile group: 'org.apache.commons', name: 'commons-lang3', version: '3.8'
     compile group: 'org.slf4j', name: 'slf4j-simple', version: '1.7.25'

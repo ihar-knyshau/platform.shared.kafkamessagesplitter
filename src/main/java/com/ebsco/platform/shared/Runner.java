@@ -6,11 +6,14 @@ import com.ebsco.platform.shared.kafka.KafkaMessageSplitter;
 import org.apache.commons.io.Charsets;
 import org.apache.commons.io.IOUtils;
 import org.apache.kafka.clients.consumer.Consumer;
+import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRebalanceListener;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.producer.Producer;
+import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.TopicPartition;
+import org.apache.kafka.common.serialization.ByteArrayDeserializer;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,7 +26,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class Runner {
     private static final String chunkTopic = "test35";
     private static final String consumerGroup = "test35";
-    private static final String kafkaUri = "localhost:9092";
+    private static final String kafkaUri = "quickstart.cloudera:9092";
     int recordsCount = 0;
     int unsubscribed = 0;
 
@@ -32,14 +35,16 @@ public class Runner {
     }
 
     private void consume() throws IOException {
-      /*  Instant instant = Instant.now();
+        Instant instant = Instant.now();
         System.out.println(instant);
         List<String> files = IOUtils.readLines(Objects.requireNonNull(Runner.class.getClassLoader().getResourceAsStream("asimov_txt")), Charsets.UTF_8);
 
 //        Map<String, Integer> list = new HashMap<>();
+        Properties props = new Properties();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafkaUri);
 
         for (String file : files) {
-            Producer<byte[], byte[]> producer = KafkaFactory.createProducer(kafkaUri);
+            Producer<byte[], byte[]> producer = KafkaFactory.createProducer(props);
 //            new Thread(() -> {
                 InputStream inputStream = Runner.class.getResourceAsStream("/asimov_txt/" + file);
                 String strMessage = null;
@@ -93,46 +98,6 @@ public class Runner {
 //
 //            }).start();
 //        }
-        for (int i = 0; i < 2; i++) {
-            new Thread(() -> {
-                Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(kafkaUri, consumerGroup);
-
-                consumer.subscribe(Collections.singletonList(chunkTopic), new ChunkRebalanceListener((ChunksConsumer) consumer));
-
-                ConsumerRecords<byte[], byte[]> consumerRecords;
-
-                do {
-                    if (recordsCount > 30 && unsubscribed < 1) {
-                        unsubscribed++;
-                        consumer.unsubscribe();
-                        System.out.println("UNSUBSCRIBE of " + consumer + "!!!111");
-                        break;
-                    } else {
-                        consumerRecords = consumer.poll(Duration.ofMinutes(1));
-                        recordsCount += consumerRecords.count();
-                        System.out.println("Records consumed by " + consumer + ": " + recordsCount + "/" + list.size());
-                        consumerRecords.records(chunkTopic).iterator().forEachRemaining(record -> {
-                            String composed = null;
-                            try {
-                                composed = IOUtils.toString(record.value(), "UTF-8");
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                            checkFiles(list, composed);
-                        });
-                    }
-                } while (list.values().stream().anyMatch(e -> e == 0));
-
-            }).start();
-        }*/
-    }
-
-    private void checkFiles(Map<String, Integer> list, String composed) {
-        if (!list.containsKey(composed)) {
-            throw new IllegalStateException("fail");
-        } else {
-            list.put(composed, list.get(composed) + 1);
-        }
     }
 
 //    private void checkFiles(Map<String, Integer> list, String composed) {

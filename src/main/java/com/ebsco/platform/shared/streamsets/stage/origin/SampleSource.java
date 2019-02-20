@@ -73,30 +73,37 @@ public abstract class SampleSource extends BasePushSource {
         LOG.warn("STARTED INIT");
         thread = new Thread(() -> {
             Properties props = new Properties();
-            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, "quickstart.cloudera:9092");
-            Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(props);
+            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, getKafkaHost() + ":" + getKafkaPort());
+            props.put(ConsumerConfig.GROUP_ID_CONFIG, getConsumerGroup());
+            try {
+                Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(props);
 
-            consumer.subscribe(Collections.singletonList("test35"), new SampleSource.ChunkRebalanceListener((ChunksConsumer) consumer));
+                consumer.subscribe(Collections.singletonList(getTopic()), new SampleSource.ChunkRebalanceListener((ChunksConsumer) consumer));
 
-            ConsumerRecords<byte[], byte[]> consumerRecords;
+                ConsumerRecords<byte[], byte[]> consumerRecords;
 
-            do {
-                LOG.warn("POLL");
-                consumerRecords = consumer.poll(Duration.ofMinutes(1));
-                consumerRecords.records("test35").iterator().forEachRemaining(record -> {
-                    LOG.warn("PRODUCE");
-                    String composed = null;
-                    String key = null;
-                    try {
-                        key = IOUtils.toString(record.key(), "UTF-8");
-                        composed = IOUtils.toString(record.value(), "UTF-8");
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                    produceRecord(key, composed);
-//        produceRecord("121346463", "wdwdwdwdwddwd");
-                });
-            } while (!this.thread.isInterrupted());
+                do {
+                    consumerRecords = consumer.poll(1000);
+                    consumerRecords.records(getTopic()).iterator().forEachRemaining(record -> {
+                        String composed = null;
+                        String key = null;
+                        try {
+                            key = IOUtils.toString(record.key(), "UTF-8");
+                            composed = IOUtils.toString(record.value(), "UTF-8");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        produceRecord(key, composed);
+                    });
+                } while (!this.thread.isInterrupted());
+            } catch (Exception e){
+                LOG.error("CONSUMER ERROR");
+                LOG.error(e.getCause().getMessage());
+                StackTraceElement[] s = e.getCause().getStackTrace();
+                for(StackTraceElement se : s){
+                    LOG.error("\tat " + se);
+                }
+            }
         });
         LOG.warn("FINISHED INIT");
     }
@@ -116,11 +123,9 @@ public abstract class SampleSource extends BasePushSource {
     /** {@inheritDoc} */
     @Override
     public void destroy() {
-        LOG.warn("STARTED DESTROY");
         // Clean up any open resources.
         thread.interrupt();
         super.destroy();
-        LOG.warn("FINISHED DESTROY");
     }
 
 
@@ -142,7 +147,9 @@ public abstract class SampleSource extends BasePushSource {
 
     private Record createRecord(String message_id, String content) {
         Record record = getContext().createRecord(message_id);
-        record.set(Field.create(content));
+        Map<String, Field> map = new LinkedHashMap<>();
+        map.put("text", Field.create(content));
+        record.set(Field.create(map));
         return record;
     }
 

@@ -13,7 +13,8 @@ import java.util.Properties;
 public class KafkaFactory {
 
     public static Producer<byte[], byte[]> createProducer(Properties producerProperties) {
-        Properties props = new Properties(producerProperties);
+        Properties props = new Properties();
+        producerProperties.stringPropertyNames().forEach(propName -> props.put(propName, producerProperties.getProperty(propName)));
         props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
         return new KafkaProducer<>(props);
@@ -21,6 +22,7 @@ public class KafkaFactory {
 
     public static Consumer<byte[], byte[]> createConsumer(Properties producerProperties) {
         Properties props = new Properties();
+        producerProperties.stringPropertyNames().forEach(propName -> props.put(propName, producerProperties.getProperty(propName)));
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ByteArrayDeserializer.class.getName());
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, false);

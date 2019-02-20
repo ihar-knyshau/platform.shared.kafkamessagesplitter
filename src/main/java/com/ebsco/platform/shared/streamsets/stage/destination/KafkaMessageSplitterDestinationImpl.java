@@ -13,7 +13,7 @@ import java.util.Map;
         version = 1,
         label = "Kafka message splitter destination",
         description = "",
-        icon = "default.png",
+//        icon = "default.png",
         recordsByRef = true,
         onlineHelpRefUrl = ""
 )
