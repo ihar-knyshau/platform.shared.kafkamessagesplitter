@@ -4,6 +4,7 @@ import com.ebsco.platform.shared.kafka.KafkaFactory;
 import com.ebsco.platform.shared.kafka.KafkaMessageSplitter;
 import com.ebsco.platform.shared.streamsets.Errors;
 import com.ebsco.platform.shared.streamsets.Groups;
+import com.ebsco.platform.shared.streamsets.stage.origin.SampleSource;
 import com.streamsets.pipeline.api.Batch;
 import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.StageException;
@@ -14,10 +15,14 @@ import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
 import org.apache.kafka.common.serialization.ByteArraySerializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public abstract class KafkaMessageSplitterDestination extends BaseTarget {
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaMessageSplitterDestination.class);
+
     public static final int TARGET_CONSUMER_MIN_ZERO_LAG_THRESHOLD = 1;
 
     Producer<byte[], byte[]> producer;
@@ -96,8 +101,8 @@ public abstract class KafkaMessageSplitterDestination extends BaseTarget {
      */
     public void write(Record record) throws OnRecordErrorException {
         // wait until all the previous messages has been consumed (if configured)
-        waitForTopicBeenConsumed(record);
-
+        //waitForTopicBeenConsumed(record);
+        LOG.warn("Write to topic "+getTopic()+" content:" +record.get("/content").getValueAsString());
         List<ProducerRecord<byte[], byte[]>> kafkaRecords = messageSplitter.createChunkRecords(messageSplitter.splitMessage(record.get("/content").getValueAsString()), getTopic());
         kafkaRecords.forEach(kafkaRecord -> producer.send(kafkaRecord));
     }
