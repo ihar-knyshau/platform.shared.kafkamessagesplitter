@@ -73,12 +73,12 @@ public class KafkaTimeBasedChunkCacheTest {
 
     @Test
     public void testCanRemoveOutdated() throws IOException, InterruptedException {
+        KafkaTimeBasedChunkCache cache = new KafkaTimeBasedChunkCache(1000 * 60 * 1L);
         String testMessage = IOUtils.toString(KafkaTimeBasedChunkCacheTest.class.getResourceAsStream("/message"), UTF_8);
         List<ConsumerRecord<byte[], byte[]>> testData = splitMessage("testTopic", 0, testMessage);
         testData.remove(testData.size() - 1);
-        KafkaTimeBasedChunkCache cache = new KafkaTimeBasedChunkCache(1000 * 60 * 1L);
-        Thread.sleep(1000 * 60 * 1L + 1);
-        cache.removeOutdated(System.currentTimeMillis());
+        testData.forEach(record->cache.put(record));
+        cache.removeOutdated(System.currentTimeMillis()+1000 * 60 * 1L + 1);
         assertTrue(cache.isTopicPartitionEmpty(new TopicPartition("testTopic", 0)));
     }
 }
