@@ -32,8 +32,6 @@ public abstract class KafkaMessageSplitterDestination extends BaseTarget {
 
     public abstract Integer getChunkSize();
 
-    public abstract Long getCacheLifespan();
-
     public abstract String getBrokers();
 
     public abstract String getTopic();
@@ -59,21 +57,20 @@ public abstract class KafkaMessageSplitterDestination extends BaseTarget {
         if (getBrokers().isEmpty()) {
             issues.add(
                     getContext().createConfigIssue(
-                            Groups.KafkaConnectionGroup.Kafka.name(), configName, Errors.CONFIG, "No brokers provided"
+                            Groups.KafkaChunkedGroup.Kafka.name(), configName, Errors.CONFIG, "No brokers provided"
                     )
             );
         }
         if (getTopic().isEmpty()) {
             issues.add(
                     getContext().createConfigIssue(
-                            Groups.KafkaConnectionGroup.Kafka.name(), configName, Errors.CONFIG, "No topic provided"
+                            Groups.KafkaChunkedGroup.Kafka.name(), configName, Errors.CONFIG, "No topic provided"
                     )
             );
         }
         Properties props = new Properties();
         String bootstrapServers = getBrokers().toLowerCase();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ChunksConsumer.CACHE_LIFESPAN_PROPERTY, getCacheLifespan());
 
 
         producer = KafkaFactory.createProducer(props);

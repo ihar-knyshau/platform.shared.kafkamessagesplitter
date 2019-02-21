@@ -17,7 +17,7 @@ import java.util.Map;
         recordsByRef = true,
         onlineHelpRefUrl = ""
 )
-@ConfigGroups(value = Groups.KafkaConnectionGroup.class)
+@ConfigGroups(value = Groups.KafkaChunkedGroup.class)
 @GenerateResourceBundle
 public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDestination {
     @ConfigDef(
@@ -26,19 +26,10 @@ public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDes
             defaultValue = "1024",
             label = "Chunk size (bytes)",
             displayPosition = 10,
-            group = "Kafka"
+            group = "Chunk cache"
     )
     public int chunkSize;
 
-    @ConfigDef(
-            required = true,
-            type = ConfigDef.Type.NUMBER,
-            defaultValue = "180000",
-            label = "Consumer cache lifespan in millis",
-            displayPosition = 10,
-            group = "Kafka"
-    )
-    public Long cacheLifespan;
 
     @ConfigDef(
             required = true,
@@ -129,11 +120,6 @@ public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDes
     @Override
     public Integer getChunkSize() {
         return chunkSize;
-    }
-
-    @Override
-    public Long getCacheLifespan() {
-        return cacheLifespan;
     }
 
     @Override

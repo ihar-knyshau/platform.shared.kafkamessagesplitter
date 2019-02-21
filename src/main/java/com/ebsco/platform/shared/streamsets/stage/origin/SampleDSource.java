@@ -35,7 +35,7 @@ import com.streamsets.pipeline.api.StageDef;
     recordsByRef = true,
     onlineHelpRefUrl = ""
 )
-@ConfigGroups(value = Groups.KafkaMFSGroup.class)
+@ConfigGroups(value = Groups.KafkaChunkedGroup.class)
 @GenerateResourceBundle
 public class SampleDSource extends SampleSource {
 
@@ -82,10 +82,10 @@ public class SampleDSource extends SampleSource {
   @ConfigDef(
           required = true,
           type = ConfigDef.Type.NUMBER,
-          defaultValue = "600000",
-          label = "Kafka Consumer Group",
+          defaultValue = "180000",
+          label = "Consumer cache lifespan in millis",
           displayPosition = 10,
-          group = "Kafka"
+          group = "Chunk cache"
   )
   public Long kafkaCacheLifespan;
 
