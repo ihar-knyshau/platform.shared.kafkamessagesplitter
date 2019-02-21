@@ -17,7 +17,7 @@ import java.util.Map;
         recordsByRef = true,
         onlineHelpRefUrl = ""
 )
-@ConfigGroups(value = Groups.KafkaMFSGroup.class)
+@ConfigGroups(value = Groups.KafkaConnectionGroup.class)
 @GenerateResourceBundle
 public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDestination {
     @ConfigDef(
@@ -26,9 +26,29 @@ public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDes
             defaultValue = "1024",
             label = "Chunk size (bytes)",
             displayPosition = 10,
-            group = "MFS"
+            group = "Kafka"
     )
     public int chunkSize;
+
+    @ConfigDef(
+            required = true,
+            type = ConfigDef.Type.NUMBER,
+            defaultValue = "180000",
+            label = "Consumer cache lifespan in millis",
+            displayPosition = 10,
+            group = "Kafka"
+    )
+    public Long cacheLifespan;
+
+    @ConfigDef(
+            required = true,
+            type = ConfigDef.Type.STRING,
+            defaultValue = "content",
+            label = "Name of the field that stores content",
+            displayPosition = 10,
+            group = "Kafka"
+    )
+    public String contentField;
 
 
     @ConfigDef(
@@ -96,7 +116,7 @@ public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDes
     public Integer targetConsumerZeroLagThreshold;
 
     @ConfigDef(
-            required = true,
+            required = false,
             type = ConfigDef.Type.MAP,
             defaultValue = "",
             label = "Producer custom parameters",
@@ -109,6 +129,11 @@ public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDes
     @Override
     public Integer getChunkSize() {
         return chunkSize;
+    }
+
+    @Override
+    public Long getCacheLifespan() {
+        return cacheLifespan;
     }
 
     @Override
@@ -139,6 +164,11 @@ public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDes
     @Override
     public Map<String, String> getKafkaProducerProperties() {
         return kafkaProducerProperties;
+    }
+
+    @Override
+    public String getContentFieldName() {
+        return contentField;
     }
 
 }

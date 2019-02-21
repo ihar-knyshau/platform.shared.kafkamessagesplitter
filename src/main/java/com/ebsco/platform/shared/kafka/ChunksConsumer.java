@@ -122,7 +122,6 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
         List<ConsumerRecord> records = new ArrayList<>();
         Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> output = new HashMap<>();
         kafkaConsumer.poll(timeout).forEach(record -> records.add(record));
-        output.putAll(timeBasedChunkCache.removeOutdated(System.currentTimeMillis()));
         records.stream()
                 .map(record -> timeBasedChunkCache.put(record))
                 .filter(consumerRecord -> ((Optional) consumerRecord).isPresent())
@@ -135,7 +134,10 @@ public class ChunksConsumer implements Consumer<byte[], byte[]> {
                     }
                     output.get(topicPartition).add(castedRecord);
                 });
-        commitOffsetsIfPossible(output);
+        Map<TopicPartition, List<ConsumerRecord<byte[], byte[]>>> recordsToCheck = new HashMap<>();
+        recordsToCheck.putAll(timeBasedChunkCache.removeOutdated(System.currentTimeMillis()));
+        recordsToCheck.putAll(output);
+        commitOffsetsIfPossible(recordsToCheck);
         return new ConsumerRecords<>(output);
 
     }

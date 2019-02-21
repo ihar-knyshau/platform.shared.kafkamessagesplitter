@@ -15,7 +15,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 public class KafkaMessageSplitter {
     public static final String UUID_KEY = "uuid";
     public static final String TOTAL_CHUNKS = "totalchunks";
-    public static final String CURRENT_CHUNK = "currentchunks";
+    public static final String CURRENT_CHUNK = "currentchunk";
     public static final String FINAL_CHUNK_KEY = "finalchunk";
     private int desiredChunkSize;
 

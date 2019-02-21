@@ -1,5 +1,6 @@
 package com.ebsco.platform.shared.streamsets.stage.destination;
 
+import com.ebsco.platform.shared.kafka.ChunksConsumer;
 import com.ebsco.platform.shared.kafka.KafkaFactory;
 import com.ebsco.platform.shared.kafka.KafkaMessageSplitter;
 import com.ebsco.platform.shared.streamsets.Errors;
@@ -31,6 +32,8 @@ public abstract class KafkaMessageSplitterDestination extends BaseTarget {
 
     public abstract Integer getChunkSize();
 
+    public abstract Long getCacheLifespan();
+
     public abstract String getBrokers();
 
     public abstract String getTopic();
@@ -43,6 +46,8 @@ public abstract class KafkaMessageSplitterDestination extends BaseTarget {
 
     public abstract Map<String, String> getKafkaProducerProperties();
 
+    public abstract String getContentFieldName();
+
     /**
      * {@inheritDoc}
      */
@@ -54,22 +59,22 @@ public abstract class KafkaMessageSplitterDestination extends BaseTarget {
         if (getBrokers().isEmpty()) {
             issues.add(
                     getContext().createConfigIssue(
-                            Groups.KafkaMFSGroup.Kafka.name(), configName, Errors.CONFIG, "Wrong brokers"
+                            Groups.KafkaConnectionGroup.Kafka.name(), configName, Errors.CONFIG, "No brokers provided"
                     )
             );
         }
         if (getTopic().isEmpty()) {
             issues.add(
                     getContext().createConfigIssue(
-                            Groups.KafkaMFSGroup.Kafka.name(), configName, Errors.CONFIG, "Wrong topic"
+                            Groups.KafkaConnectionGroup.Kafka.name(), configName, Errors.CONFIG, "No topic provided"
                     )
             );
         }
         Properties props = new Properties();
         String bootstrapServers = getBrokers().toLowerCase();
         props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
-        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
-        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, ByteArraySerializer.class.getName());
+        props.put(ChunksConsumer.CACHE_LIFESPAN_PROPERTY, getCacheLifespan());
+
 
         producer = KafkaFactory.createProducer(props);
         messageSplitter = new KafkaMessageSplitter(getChunkSize());
@@ -101,9 +106,8 @@ public abstract class KafkaMessageSplitterDestination extends BaseTarget {
      */
     public void write(Record record) throws OnRecordErrorException {
         // wait until all the previous messages has been consumed (if configured)
-        //waitForTopicBeenConsumed(record);
-//        LOG.warn("Write to topic "+getTopic()+" content:" +record.get("/content").getValueAsString());
-        List<ProducerRecord<byte[], byte[]>> kafkaRecords = messageSplitter.createChunkRecords(messageSplitter.splitMessage(record.get("/content").getValueAsString()), getTopic());
+        waitForTopicBeenConsumed(record);
+        List<ProducerRecord<byte[], byte[]>> kafkaRecords = messageSplitter.createChunkRecords(messageSplitter.splitMessage(record.get("/"+getContentFieldName()).getValueAsString()), getTopic());
         kafkaRecords.forEach(kafkaRecord -> producer.send(kafkaRecord));
     }
 
