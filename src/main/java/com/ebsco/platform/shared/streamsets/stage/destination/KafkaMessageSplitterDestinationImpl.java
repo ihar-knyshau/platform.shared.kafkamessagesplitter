@@ -26,7 +26,7 @@ public class KafkaMessageSplitterDestinationImpl extends KafkaMessageSplitterDes
             defaultValue = "1024",
             label = "Chunk size (bytes)",
             displayPosition = 10,
-            group = "Chunk cache"
+            group = "ChunkCache"
     )
     public int chunkSize;
 

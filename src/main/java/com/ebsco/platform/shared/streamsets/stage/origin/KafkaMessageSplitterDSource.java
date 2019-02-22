@@ -37,7 +37,7 @@ import com.streamsets.pipeline.api.StageDef;
 )
 @ConfigGroups(value = Groups.KafkaChunkedGroup.class)
 @GenerateResourceBundle
-public class SampleDSource extends SampleSource {
+public class KafkaMessageSplitterDSource extends KafkaMessageSplitterSource {
 
   @ConfigDef(
       required = true,
@@ -85,7 +85,7 @@ public class SampleDSource extends SampleSource {
           defaultValue = "180000",
           label = "Consumer cache lifespan in millis",
           displayPosition = 10,
-          group = "Chunk cache"
+          group = "ChunkCache"
   )
   public Long kafkaCacheLifespan;
 

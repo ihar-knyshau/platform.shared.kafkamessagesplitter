@@ -1,5 +1,5 @@
 [
-  "com.ebsco.platform.shared.streamsets.stage.origin.SampleDSource",
+  "com.ebsco.platform.shared.streamsets.stage.origin.KafkaMessageSplitterDSource",
   "com.ebsco.platform.shared.streamsets.stage.destination.KafkaMessageSplitterDestinationImpl",
   "com.ebsco.platform.shared.streamsets.Groups"
 ]

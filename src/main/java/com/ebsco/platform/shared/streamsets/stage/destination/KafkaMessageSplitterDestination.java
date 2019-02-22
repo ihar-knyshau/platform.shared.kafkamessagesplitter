@@ -1,11 +1,9 @@
 package com.ebsco.platform.shared.streamsets.stage.destination;
 
-import com.ebsco.platform.shared.kafka.ChunksConsumer;
 import com.ebsco.platform.shared.kafka.KafkaFactory;
 import com.ebsco.platform.shared.kafka.KafkaMessageSplitter;
 import com.ebsco.platform.shared.streamsets.Errors;
 import com.ebsco.platform.shared.streamsets.Groups;
-import com.ebsco.platform.shared.streamsets.stage.origin.SampleSource;
 import com.streamsets.pipeline.api.Batch;
 import com.streamsets.pipeline.api.Record;
 import com.streamsets.pipeline.api.StageException;
@@ -15,7 +13,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.kafka.clients.producer.Producer;
 import org.apache.kafka.clients.producer.ProducerConfig;
 import org.apache.kafka.clients.producer.ProducerRecord;
-import org.apache.kafka.common.serialization.ByteArraySerializer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -39,15 +39,15 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
-/**
- * This source is an example and does not actually read from anywhere.
- * It does however, generate generate a simple record with one field.
- */
-public abstract class SampleSource extends BasePushSource {
+public abstract class KafkaMessageSplitterSource extends BasePushSource {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SampleSource.class);
-
+    private static final Logger LOG = LoggerFactory.getLogger(KafkaMessageSplitterSource.class);
+    private static final int THREAD_COUNT = 1;
 
     public abstract String getKafkaHost();
 
@@ -59,64 +59,26 @@ public abstract class SampleSource extends BasePushSource {
 
     public abstract Long getCacheLifespan();
 
-    private final CountDownLatch latch = new CountDownLatch(1);
-
-    private Thread thread;
+    private ExecutorService executorService = Executors.newFixedThreadPool(getNumberOfThreads());
 
     @Override
     protected List<ConfigIssue> init() {
-        initThread();
         return super.init();
-    }
-
-    private void initThread() {
-        LOG.warn("STARTED INIT");
-        thread = new Thread(() -> {
-            Properties props = new Properties();
-            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, getKafkaHost() + ":" + getKafkaPort());
-            props.put(ConsumerConfig.GROUP_ID_CONFIG, getConsumerGroup());
-            try {
-                Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(props);
-
-                consumer.subscribe(Collections.singletonList(getTopic()), new SampleSource.ChunkRebalanceListener((ChunksConsumer) consumer));
-
-                ConsumerRecords<byte[], byte[]> consumerRecords;
-
-                do {
-                    consumerRecords = consumer.poll(1000);
-                    consumerRecords.records(getTopic()).iterator().forEachRemaining(record -> {
-                        String composed = null;
-                        String key = null;
-                        try {
-                            key = IOUtils.toString(record.key(), "UTF-8");
-                            composed = IOUtils.toString(record.value(), "UTF-8");
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
-                        produceRecord(key, composed);
-                    });
-                } while (!this.thread.isInterrupted());
-            } catch (Exception e){
-                LOG.error("CONSUMER ERROR");
-                LOG.error(e.getCause().getMessage());
-                StackTraceElement[] s = e.getCause().getStackTrace();
-                for(StackTraceElement se : s){
-                    LOG.error("\tat " + se);
-                }
-            }
-        });
-        LOG.warn("FINISHED INIT");
     }
 
     @Override
     public void produce(Map<String, String> lastOffsets, int maxBatchSize) throws StageException {
-        try {
-            LOG.warn("STARTED");
-            thread.start();
-            latch.await();
-            LOG.warn("FINISHED");
-        } catch (InterruptedException e) {
-            throw new RuntimeException("Thread was interrupted");
+        List<Future<Runnable>> futures = new ArrayList<>(getNumberOfThreads());
+        for(int i = 0; i < getNumberOfThreads(); i++) {
+            Future future = executorService.submit(new ChunksConsumerRunnable(this));
+            futures.add(future);
+        }
+        for(Future<Runnable> f : futures) {
+            try {
+                f.get();
+            } catch (InterruptedException| ExecutionException e) {
+                LOG.error("Record generation threads have been interrupted", e.getMessage());
+            }
         }
     }
 
@@ -124,14 +86,16 @@ public abstract class SampleSource extends BasePushSource {
     @Override
     public void destroy() {
         // Clean up any open resources.
-        thread.interrupt();
+        LOG.warn("DESTROY STARTED");
+        executorService.shutdownNow();
+        LOG.warn("DESTROY FIN");
         super.destroy();
     }
 
 
     @Override
     public int getNumberOfThreads() {
-        return 1;
+        return THREAD_COUNT;
     }
 
     private void produceRecord(String id, String content) {
@@ -153,7 +117,7 @@ public abstract class SampleSource extends BasePushSource {
         return record;
     }
 
-    class ChunkRebalanceListener implements ConsumerRebalanceListener {
+    static class ChunkRebalanceListener implements ConsumerRebalanceListener {
 
         private ChunksConsumer chunksConsumer;
 
@@ -168,6 +132,51 @@ public abstract class SampleSource extends BasePushSource {
         @Override
         public void onPartitionsAssigned(Collection<TopicPartition> partitions) {
             chunksConsumer.setNewCachePartitions(partitions);
+        }
+    }
+
+    static class ChunksConsumerRunnable implements Runnable {
+
+        private KafkaMessageSplitterSource source;
+
+        public ChunksConsumerRunnable(KafkaMessageSplitterSource source) {
+            this.source = source;
+        }
+
+        @Override
+        public void run() {
+            Properties props = new Properties();
+            props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, source.getKafkaHost() + ":" + source.getKafkaPort());
+            props.put(ConsumerConfig.GROUP_ID_CONFIG, source.getConsumerGroup());
+            try {
+                Consumer<byte[], byte[]> consumer = KafkaFactory.createConsumer(props);
+
+                consumer.subscribe(Collections.singletonList(source.getTopic()), new KafkaMessageSplitterSource.ChunkRebalanceListener((ChunksConsumer) consumer));
+
+                ConsumerRecords<byte[], byte[]> consumerRecords;
+
+                do {
+                    consumerRecords = consumer.poll(Duration.ofMinutes(1));
+                    consumerRecords.records(source.getTopic()).iterator().forEachRemaining(record -> {
+                        String composed = null;
+                        String key = null;
+                        try {
+                            key = IOUtils.toString(record.key(), "UTF-8");
+                            composed = IOUtils.toString(record.value(), "UTF-8");
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
+                        source.produceRecord(key, composed);
+                    });
+                } while (!source.getContext().isStopped());
+            } catch (Exception e) {
+                LOG.error("CONSUMER ERROR");
+                LOG.error(e.getCause().getMessage());
+                StackTraceElement[] s = e.getCause().getStackTrace();
+                for (StackTraceElement se : s) {
+                    LOG.error("\tat " + se);
+                }
+            }
         }
     }
 }
